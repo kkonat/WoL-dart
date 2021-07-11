@@ -1,4 +1,4 @@
 # WakeOnLAN application
 
-Testing cubit for network state management
+Testing multiple Cubits for network and app state management
 
