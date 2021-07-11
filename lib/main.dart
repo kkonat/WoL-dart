@@ -48,6 +48,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final ButtonStyle style =
+        ElevatedButton.styleFrom(textStyle: const TextStyle(fontSize: 20));
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -62,10 +64,20 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
             BlocBuilder<NetCubit, NetState>(
               builder: (context, state) {
                 return Text(
-                  'State :' + state.nState.toString(),
+                  state.net.toString(),
                   style: Theme.of(context).textTheme.headline4,
                 );
               },
+            ),
+            Padding(
+              padding: const EdgeInsets.all(18.0),
+              child: ElevatedButton(
+                style: style,
+                onPressed: () {
+                  BlocProvider.of<NetCubit>(context).wake();
+                },
+                child: const Text('Wake...'),
+              ),
             ),
           ],
         ),
@@ -75,7 +87,32 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
           BlocProvider.of<NetCubit>(context).wake();
         },
         tooltip: 'Connect',
-        child: Icon(Icons.add),
+        child: BlocBuilder<NetCubit, NetState>(
+          builder: (context, state) {
+            var icon;
+            switch (state.net) {
+              case aState.checkingWifi:
+                icon = Icons.device_unknown_outlined;
+                break;
+              case aState.noWifi:
+                icon = Icons.do_disturb;
+                break;
+              case aState.online:
+                icon = Icons.flash_on_rounded;
+                break;
+              case aState.sensing:
+                icon = Icons.flash_off_rounded;
+                break;
+              case aState.pinging:
+                icon = Icons.hourglass_empty_outlined;
+                break;
+              case aState.waking:
+                icon = Icons.notifications_none_outlined;
+                break;
+            }
+            return Icon(icon);
+          },
+        ),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }

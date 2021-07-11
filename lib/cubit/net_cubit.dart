@@ -6,97 +6,115 @@ import 'package:dart_ping/dart_ping.dart';
 
 part 'net_state.dart';
 
+// NetCubit is the network state cubit
 class NetCubit extends Cubit<NetState> {
-  var ip = '192.168.0.91';
-  var mac = '14:DA:E9:03:FD:AC';
+  static const _pingAddr = '192.168.0.91';
+  static const _wakeAddr = '192.168.0.255';
+  static const _macAddr = '14:DA:E9:03:FD:AC';
 
-  late Connectivity _connectivity;
-
-  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
-
-  late Timer _timer;
+  late final Timer _timer;
+  late final Connectivity _connectivity;
+  late final StreamSubscription<ConnectivityResult> _connectivitySubscription;
 
   NetCubit() : super(NetState()) {
     _connectivity = Connectivity();
   }
 
+  void _emit(aState s) => emit(NetState(net: s)); // for brievity
+
+  // startup code, called from widget state InitState()
   void initialize() {
-    starttimer();
-
-    checkwifi();
-
+    _starttimer();
+    _checkwifi();
     _connectivitySubscription =
         _connectivity.onConnectivityChanged.listen(_updateConnectionStatus);
   }
 
+  // housekeeping
   void cleanup() {
     _connectivitySubscription.cancel();
     _timer.cancel();
   }
 
+// listener to monitor connectivity changes
   Future<void> _updateConnectionStatus(ConnectivityResult result) async {
     if (result == ConnectivityResult.wifi) {
-      emit(NetState(nState: aState.sensing));
+      // WiFi is on, will be sensing the server
+      _emit(aState.sensing);
     } else
-      emit(NetState(nState: aState.noWifi));
+      // otherwise, i.e. when offline or on a mobile network,
+      _emit(aState.noWifi);
   }
 
-  void starttimer() {
+  // initializes timer, which will be sending ping every 10 seconds
+  void _starttimer() {
     _timer = Timer.periodic(Duration(seconds: 10), (t) {
-      if (state.nState == aState.sensing) ping();
+      // ping when wifi is on and the app is in sensing state
+      // also ping when the server was recently online, to chek if it hasn't gone offline
+      if (state.net == aState.sensing || state.net == aState.online) _ping();
     });
   }
 
-  void checkwifi() async {
-    emit(NetState(nState: aState.checkingWifi));
+  // checks whether wifi is on
+  void _checkwifi() async {
+    _emit(aState.checkingWifi);
     ConnectivityResult connectivityResult =
         await _connectivity.checkConnectivity();
-
+    // if on a mobile network, waking won't work
+    // in future may here add remote waking vias some API
     if (connectivityResult == ConnectivityResult.mobile) {
-      emit(NetState(nState: aState.noWifi));
+      // tell the app there's no WiFi available
+      _emit(aState.noWifi);
     } else if (connectivityResult == ConnectivityResult.wifi) {
-      ping();
+      // if WiFi is on start pinging the server
+      _emit(aState.sensing);
     }
   }
 
-  void ping() async {
+// ping() pings the server to see whether it is on or off/line
+  void _ping() async {
     // Create ping object with desired args
-    final ping = Ping(ip, count: 1);
+    final ping = Ping(_pingAddr, count: 1);
 
-    emit(NetState(nState: aState.pinging));
-    // [Optional]
-    // Preview command that will be run (helpful for debugging)
-    print('Running command: ${ping.command}');
+    emit(NetState(net: aState.pinging));
 
     // Begin ping process and listen for output
     ping.stream.listen((event) {
       if (event.summary != null) {
         if (event.summary!.received == 0)
-          emit(NetState(nState: aState.periodicallyChecking));
+          // no ping recived, go to sleep and then ping back again, go to the sensing state
+          emit(NetState(net: aState.sensing));
         else
-          emit(NetState(nState: aState.online));
+          // the host responded, it is online
+          emit(NetState(net: aState.online));
       }
     });
   }
 
+// wake() wakes the remote server and switches to sensing state
   void wake() async {
-    emit(NetState(nState: aState.waking));
+    // notify app that wake will be in progress,
+    // this may be done in an instant, but it's async so new state is needed
+    _emit(aState.waking);
 
     // Validate that the two strings are formatted correctly
-    if (!IPv4Address.validate(ip)) {
+    if (!IPv4Address.validate(_wakeAddr)) {
       print('Invalid IPv4 Address String');
       return;
     }
-    if (!MACAddress.validate(mac)) {
+    if (!MACAddress.validate(_macAddr)) {
       print('Invalid MAC Address String');
       return;
     }
     // Create the IPv4 and MAC objects
-    var ipv4Address = IPv4Address.from(ip);
-    var macAddress = MACAddress.from(mac);
-    // Send the WOL packetz
-    // Port parameter is optional, set to 55 here as an example, but defaults to port 9
+    var ipv4Address = IPv4Address.from(_wakeAddr);
+    var macAddress = MACAddress.from(_macAddr);
+
+    // Send the WOL packets
+
     await WakeOnLAN.from(ipv4Address, macAddress, port: 9).wake();
-    emit(NetState(nState: aState.sensing));
+
+    // start checking when the host comes online
+    _emit(aState.sensing);
   }
 }
