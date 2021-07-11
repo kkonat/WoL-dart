@@ -44,18 +44,40 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
+class _MyHomePageState extends State<MyHomePage>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
     BlocProvider.of<AppCubit>(context).initialize();
+
+    WidgetsBinding.instance?.addObserver(this);
   }
 
   @override
   void dispose() {
     BlocProvider.of<AppCubit>(context).cleanup();
-
+    WidgetsBinding.instance?.removeObserver(this);
     super.dispose();
+  }
+
+  // late AppLifecycleState _appLifecycleState;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    setState(() {
+      // _appLifecycleState = state;
+    });
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        BlocProvider.of<AppCubit>(context).sleep();
+        break;
+      case AppLifecycleState.resumed:
+        BlocProvider.of<AppCubit>(context).resume();
+
+        break;
+    }
   }
 
   @override

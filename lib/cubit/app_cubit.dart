@@ -56,6 +56,15 @@ class AppCubit extends Cubit<AppState> {
     });
   }
 
+  void sleep() {
+    _newAppState(aState.inactive);
+  }
+
+  void resume() {
+    _newAppState(aState.resumed);
+    _checkwifi();
+  }
+
   // checks whether wifi is on
   void _checkwifi() async {
     ConnectivityResult connectivityResult =
@@ -68,6 +77,7 @@ class AppCubit extends Cubit<AppState> {
     } else if (connectivityResult == ConnectivityResult.wifi) {
       // if WiFi is on start pinging the server
       _newAppState(aState.WifiOn);
+      sc.ping();
     }
   }
 }
