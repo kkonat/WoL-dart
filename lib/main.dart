@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'cubit/net_cubit.dart';
+import 'cubit/app_cubit.dart';
+import 'cubit/server_cubit.dart';
 
 void main() {
   runApp(MyApp());
@@ -11,8 +12,18 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => NetCubit(),
+    var sc = ServerCubit();
+    var ac = AppCubit(sc);
+
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<ServerCubit>(
+          create: (BuildContext context) => sc,
+        ),
+        BlocProvider<AppCubit>(
+          create: (BuildContext context) => ac,
+        ),
+      ],
       child: MaterialApp(
         title: 'Wake on LAN',
         theme: ThemeData(
@@ -37,12 +48,13 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    BlocProvider.of<NetCubit>(context).initialize();
+    BlocProvider.of<AppCubit>(context).initialize();
   }
 
   @override
   void dispose() {
-    BlocProvider.of<NetCubit>(context).cleanup();
+    BlocProvider.of<AppCubit>(context).cleanup();
+
     super.dispose();
   }
 
@@ -58,13 +70,18 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(
-              'Current cubit state:',
-            ),
-            BlocBuilder<NetCubit, NetState>(
+            BlocBuilder<ServerCubit, ServerState>(
               builder: (context, state) {
                 return Text(
-                  state.net.toString(),
+                  state.srv.toString(),
+                  style: Theme.of(context).textTheme.headline4,
+                );
+              },
+            ),
+            BlocBuilder<AppCubit, AppState>(
+              builder: (context, state) {
+                return Text(
+                  state.app.toString(),
                   style: Theme.of(context).textTheme.headline4,
                 );
               },
@@ -74,9 +91,26 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
               child: ElevatedButton(
                 style: style,
                 onPressed: () {
-                  BlocProvider.of<NetCubit>(context).wake();
+                  BlocProvider.of<ServerCubit>(context).wake();
                 },
                 child: const Text('Wake...'),
+              ),
+            ),
+            TextField(
+              decoration: InputDecoration(
+                  border: OutlineInputBorder(), hintText: 'Password'),
+              onChanged: (text) {
+                BlocProvider.of<ServerCubit>(context).setPass(text);
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.all(18.0),
+              child: ElevatedButton(
+                style: style,
+                onPressed: () {
+                  BlocProvider.of<ServerCubit>(context).shutdown();
+                },
+                child: const Text('Shutdown'),
               ),
             ),
           ],
@@ -84,34 +118,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          BlocProvider.of<NetCubit>(context).wake();
+          BlocProvider.of<ServerCubit>(context).wake();
         },
         tooltip: 'Connect',
-        child: BlocBuilder<NetCubit, NetState>(
-          builder: (context, state) {
-            var icon;
-            switch (state.net) {
-              case aState.checkingWifi:
-                icon = Icons.device_unknown_outlined;
-                break;
-              case aState.noWifi:
-                icon = Icons.do_disturb;
-                break;
-              case aState.online:
-                icon = Icons.flash_on_rounded;
-                break;
-              case aState.sensing:
-                icon = Icons.flash_off_rounded;
-                break;
-              case aState.pinging:
-                icon = Icons.hourglass_empty_outlined;
-                break;
-              case aState.waking:
-                icon = Icons.notifications_none_outlined;
-                break;
-            }
-            return Icon(icon);
-          },
+        child: BlocBuilder<AppCubit, AppState>(
+          builder: (context, state) => Text('Wake'),
         ),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
