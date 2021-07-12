@@ -5,8 +5,6 @@ import 'package:dart_ping/dart_ping.dart';
 import 'package:http/http.dart';
 import 'package:wake_on_lan/wake_on_lan.dart';
 
-import 'app_cubit.dart';
-
 part 'server_state.dart';
 
 class ServerCubit extends Cubit<ServerState> {
@@ -48,6 +46,8 @@ class ServerCubit extends Cubit<ServerState> {
   void setPass(String pwd) {
     _serverCredentials = 'Basic ' + base64Encode(utf8.encode('root:$pwd'));
   }
+
+  void savePass() {}
 
 // wake() wakes the remote server and switches to sensing state
   void wake() async {

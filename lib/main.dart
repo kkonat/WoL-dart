@@ -89,64 +89,85 @@ class _MyHomePageState extends State<MyHomePage>
         title: Text(widget.title),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            BlocBuilder<ServerCubit, ServerState>(
-              builder: (context, state) {
-                return Text(
-                  state.srv.toString(),
-                  style: Theme.of(context).textTheme.headline4,
-                );
-              },
-            ),
-            BlocBuilder<AppCubit, AppState>(
-              builder: (context, state) {
-                return Text(
-                  state.app.toString(),
-                  style: Theme.of(context).textTheme.headline4,
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.all(18.0),
-              child: ElevatedButton(
-                style: style,
-                onPressed: () {
-                  BlocProvider.of<ServerCubit>(context).wake();
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              BlocBuilder<ServerCubit, ServerState>(
+                builder: (context, state) {
+                  return Text(
+                    state.srv.toString(),
+                    style: Theme.of(context).textTheme.headline4,
+                  );
                 },
-                child: const Text('Wake...'),
               ),
-            ),
-            TextField(
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(), hintText: 'Password'),
-              onChanged: (text) {
-                BlocProvider.of<ServerCubit>(context).setPass(text);
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.all(18.0),
-              child: ElevatedButton(
-                style: style,
-                onPressed: () {
-                  BlocProvider.of<ServerCubit>(context).shutdown();
+              BlocBuilder<AppCubit, AppState>(
+                builder: (context, state) {
+                  return Text(
+                    state.app.toString(),
+                    style: Theme.of(context).textTheme.headline4,
+                  );
                 },
-                child: const Text('Shutdown'),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.all(18.0),
+                child: BlocBuilder<ServerCubit, ServerState>(
+                  builder: (context, state) {
+                    return ElevatedButton(
+                      style: style,
+                      onPressed: (state.ofSrv == sState.offline)
+                          ? () {
+                              BlocProvider.of<ServerCubit>(context).wake();
+                            }
+                          : null,
+                      child: const Text('Wake...'),
+                    );
+                  },
+                ),
+              ),
+              _buildPasswordRow(),
+              Padding(
+                padding: const EdgeInsets.all(18.0),
+                child: ElevatedButton(
+                  style: style,
+                  onPressed: () {
+                    BlocProvider.of<ServerCubit>(context).shutdown();
+                  },
+                  child: const Text('Shutdown'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          BlocProvider.of<ServerCubit>(context).wake();
-        },
-        tooltip: 'Connect',
-        child: BlocBuilder<AppCubit, AppState>(
-          builder: (context, state) => Text('Wake'),
-        ),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+
+  var _savedPass = false;
+  Widget _buildPasswordRow() {
+    return _savedPass
+        ? Container()
+        : Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Enter Freenas API password here'),
+                  onChanged: (text) {
+                    BlocProvider.of<ServerCubit>(context).setPass(text);
+                  },
+                ),
+              ),
+              ElevatedButton(
+                  onPressed: () {
+                    BlocProvider.of<ServerCubit>(context).savePass();
+                    setState(() {
+                      _savedPass = true;
+                    });
+                  },
+                  child: Text('Store')),
+            ],
+          );
   }
 }
