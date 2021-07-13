@@ -33,6 +33,17 @@ class AppCubit extends Cubit<AppState> {
     _timer.cancel();
   }
 
+  void sleep() {
+    _newAppState(aState.inactive);
+    _timer.cancel();
+  }
+
+  void resume() {
+    _newAppState(aState.resumed);
+    _checkwifi();
+    _starttimer();
+  }
+
 // listener to monitor connectivity changes
   Future<void> _updateConnectionStatus(ConnectivityResult result) async {
     if (result == ConnectivityResult.wifi) {
@@ -53,17 +64,6 @@ class AppCubit extends Cubit<AppState> {
         sc.ping();
       }
     });
-  }
-
-  void sleep() {
-    _newAppState(aState.inactive);
-    _timer.cancel();
-  }
-
-  void resume() {
-    _newAppState(aState.resumed);
-    _checkwifi();
-    _starttimer();
   }
 
   // checks whether wifi is on

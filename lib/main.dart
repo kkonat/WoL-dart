@@ -46,6 +46,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage>
     with TickerProviderStateMixin, WidgetsBindingObserver {
+  TextEditingController _controller = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -93,53 +94,87 @@ class _MyHomePageState extends State<MyHomePage>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              BlocBuilder<ServerCubit, ServerState>(
-                builder: (context, state) {
-                  return Text(
-                    state.srv.toString(),
-                    style: Theme.of(context).textTheme.headline4,
-                  );
-                },
-              ),
-              BlocBuilder<AppCubit, AppState>(
-                builder: (context, state) {
-                  return Text(
-                    state.app.toString(),
-                    style: Theme.of(context).textTheme.headline4,
-                  );
-                },
-              ),
+              buildInfoColumn(),
               Padding(
                 padding: const EdgeInsets.all(18.0),
                 child: BlocBuilder<ServerCubit, ServerState>(
                   builder: (context, state) {
-                    return ElevatedButton(
-                      style: style,
-                      onPressed: (state.ofSrv == sState.offline)
-                          ? () {
-                              BlocProvider.of<ServerCubit>(context).wake();
-                            }
-                          : null,
-                      child: const Text('Wake...'),
+                    return Column(
+                      children: [
+                        ElevatedButton(
+                          style: style,
+                          onPressed: (state.ofSrv == sState.offline)
+                              ? () {
+                                  BlocProvider.of<ServerCubit>(context).wake();
+                                }
+                              : null,
+                          child: const Text('Wake...'),
+                        ),
+                        _buildPasswordRow(),
+                        _buildShutdownRow(style, state, context),
+                      ],
                     );
                   },
                 ),
-              ),
-              _buildPasswordRow(),
-              Padding(
-                padding: const EdgeInsets.all(18.0),
-                child: ElevatedButton(
-                  style: style,
-                  onPressed: () {
-                    BlocProvider.of<ServerCubit>(context).shutdown();
-                  },
-                  child: const Text('Shutdown'),
-                ),
-              ),
+              )
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Row _buildShutdownRow(
+      ButtonStyle style, ServerState state, BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ElevatedButton(
+          style: style,
+          onPressed: (state.ofSrv == sState.online)
+              ? () {
+                  BlocProvider.of<ServerCubit>(context).shutdown();
+                }
+              : null,
+          child: const Text('Shutdown'),
+        ),
+        _savedPass
+            ? TextButton(
+                onPressed: () {
+                  BlocProvider.of<ServerCubit>(context).savePass();
+                  setState(() {
+                    _savedPass = false;
+                  });
+                },
+                child: Text('Enter\npassword',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11)))
+            : Container()
+      ],
+    );
+  }
+
+  Column buildInfoColumn() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        BlocBuilder<ServerCubit, ServerState>(
+          builder: (context, state) {
+            return Text(
+              'The server is now ' + state.ofSrv.toString().split(".").last,
+              style: Theme.of(context).textTheme.bodyText1,
+            );
+          },
+        ),
+        BlocBuilder<AppCubit, AppState>(
+          builder: (context, state) {
+            return Text(
+              'The application is now ' + state.app.toString().split(".").last,
+              style: Theme.of(context).textTheme.bodyText1,
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -151,11 +186,15 @@ class _MyHomePageState extends State<MyHomePage>
             children: [
               Expanded(
                 child: TextField(
+                  obscureText: true,
+                  obscuringCharacter: '\u{2620}',
+                  controller: _controller,
                   decoration: InputDecoration(
                       border: OutlineInputBorder(),
                       hintText: 'Enter Freenas API password here'),
                   onChanged: (text) {
                     BlocProvider.of<ServerCubit>(context).setPass(text);
+                    //_controller.text = text;
                   },
                 ),
               ),
@@ -166,7 +205,7 @@ class _MyHomePageState extends State<MyHomePage>
                       _savedPass = true;
                     });
                   },
-                  child: Text('Store')),
+                  child: Text('Hide')),
             ],
           );
   }
