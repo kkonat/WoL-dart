@@ -98,21 +98,27 @@ class _MyHomePageState extends State<MyHomePage>
               Padding(
                 padding: const EdgeInsets.all(18.0),
                 child: BlocBuilder<ServerCubit, ServerState>(
-                  builder: (context, state) {
-                    return Column(
-                      children: [
-                        ElevatedButton(
-                          style: style,
-                          onPressed: (state.ofSrv == sState.offline)
-                              ? () {
-                                  BlocProvider.of<ServerCubit>(context).wake();
-                                }
-                              : null,
-                          child: const Text('Wake...'),
-                        ),
-                        _buildPasswordRow(),
-                        _buildShutdownRow(style, state, context),
-                      ],
+                  builder: (servContext, servState) {
+                    return BlocBuilder<AppCubit, AppState>(
+                      builder: (appContext, appState) {
+                        return Column(
+                          children: [
+                            ElevatedButton(
+                              style: style,
+                              onPressed: (servState.ofSrv == sState.offline &&
+                                      (appState.app == aState.WifiOn))
+                                  ? () {
+                                      BlocProvider.of<ServerCubit>(servContext)
+                                          .wake();
+                                    }
+                                  : null,
+                              child: const Text('Wake...'),
+                            ),
+                            _buildPasswordRow(),
+                            _buildShutdownRow(style, servState, context),
+                          ],
+                        );
+                      },
                     );
                   },
                 ),
